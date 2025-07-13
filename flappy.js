@@ -1,143 +1,177 @@
 let board;
-let boardwidth = 450;
-let boardheight = 640;
+let boardWidth = 450;
+let boardHeight = 640;
 let context;
 
-let birdheight = 24;
-let birdwidth = 34;
-let birdX = boardwidth / 10;
-let birdY = boardheight / 2;
-
-let gameover = false
-let score = 0 ; 
+let birdWidth = 34;
+let birdHeight = 24;
+let birdX = boardWidth / 10;
+let birdY = boardHeight / 2;
 
 let bird = {
   x: birdX,
   y: birdY,
-  width: birdwidth,
-  height: birdheight
+  width: birdWidth,
+  height: birdHeight
 };
 
-// pipes
-let pipearrray = [];
+let velocityX = -2; // pipes moving left
+let velocityY = 0;
+let gravity = 0.3;
+
+let pipeArray = [];
 let pipeWidth = 64;
 let pipeHeight = 512;
-let pipeX = boardwidth;
+let pipeX = boardWidth;
 let pipeY = 0;
 
-// physics
-let velocityX = -2;  //pipes to move left
-let velocityY = 0 
-let gravity = 0.3
+let score = 0;
+let highscore = localStorage.getItem("highscore") || 0;
+let gameover = false;
 
-// images
-let birdimg, topPimg, bottomPimg;
+let gameoverScreen, scoreText, highScoreText;
 
 window.onload = function () {
   board = document.getElementById("board");
-  board.height = boardheight;
-  board.width = boardwidth;
+  board.width = boardWidth;
+  board.height = boardHeight;
   context = board.getContext("2d");
 
-  // images
-  birdimg = new Image();
-  birdimg.src = "./flappybird.png";
 
-  topPimg = new Image();
-  topPimg.src = "./toppipe.png";
+  gameoverScreen = document.getElementById("game-over-screen");
+  scoreText = document.getElementById("score-text");
+  highScoreText = document.getElementById("high-score-text");
 
-  bottomPimg = new Image();
-  bottomPimg.src = "./bottompipe.png";
+  birdImg = new Image();
+  birdImg.src = "./flappybird.png";
 
-  birdimg.onload = function () {
-    context.drawImage(birdimg, bird.x, bird.y, bird.width, bird.height);
+  topPipeImg = new Image();
+  topPipeImg.src = "./toppipe.png";
+
+  bottomPipeImg = new Image();
+  bottomPipeImg.src = "./bottompipe.png";
+
+  bgImg = new Image();
+  bgImg.src = "./flappybirdbg.png";
+
+  birdImg.onload = () => {
+    context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
   };
 
   requestAnimationFrame(update);
-  setInterval(placepipe, 1500);
-  document.addEventListener("keydown" , movebird)
+  setInterval(placePipe, 1500);
+  document.addEventListener("keydown", moveBird);
 };
 
 function update() {
-  if(gameover){
-    return ;
+  if (gameover) {
+    drawGameOver();
+    return;
   }
+
   requestAnimationFrame(update);
   context.clearRect(0, 0, board.width, board.height);
 
-  //  bird
-  velocityY += gravity ;  
-  bird.y = Math.max(bird.y + velocityY , 0 ) // applying top boundary
-  context.drawImage(birdimg, bird.x, bird.y, bird.width, bird.height);
+  context.drawImage(bgImg, 0, 0, board.width, board.height);
 
- if( bird.y >  board.height ){
-  gameover = true
- }
+  // Update bird
+  velocityY += gravity;
+  bird.y = Math.max(bird.y + velocityY, 0); // Top boundary
+  context.drawImage(birdImg, bird.x, bird.y, bird.width, bird.height);
 
- if(bird.y > board.height){
-  gameover = true ;
- }
-
-  // draw pipes
-  for (let i = 0; i < pipearrray.length; i++) {
-    let pipe = pipearrray[i];
-    pipe.x += velocityX;
-    context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
- 
- 
-
-  if(detectcollision(bird , pipe)){
+  if (bird.y > board.height) {
     gameover = true;
   }
+
+  // Pipes
+  for (let i = 0; i < pipeArray.length; i++) {
+    let pipe = pipeArray[i];
+    pipe.x += velocityX;
+    context.drawImage(pipe.img, pipe.x, pipe.y, pipe.width, pipe.height);
+
+    // Scoring
+    if (!pipe.passed && pipe.x + pipe.width < bird.x) {
+      pipe.passed = true;
+      score += 0.5; // each pipe adds 0.5, top+bottom = 1
+    }
+
+    if (detectCollision(bird, pipe)) {
+      gameover = true;
+    }
   }
 
-  context.fillstyle = "black"
-  context.font = "45px"
-  context.fillText(score , 5 , 45)
+  // Remove off-screen pipes
+  pipeArray = pipeArray.filter(pipe => pipe.x + pipe.width > 0);
+
+  // Score text
+  context.fillStyle = "black";
+  context.font = "45px sans-serif";
+  context.fillText(Math.floor(score), 5, 45);
 }
 
+function drawGameOver() {
 
+  // Show UI
+  gameoverScreen.style.display = "block";
+  scoreText.innerText = `Score: ${Math.floor(score)}`;
 
-function placepipe() {
+  if (score > highscore) {
+    highscore = Math.floor(score);
+    localStorage.setItem("highscore", highscore);
+  }
 
-if(gameover){
-  return ;
+  highScoreText.innerText = `High Score: ${highscore}`;
 }
 
-  let randompipeY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
-  let openingspace = board.height / 4;
+function placePipe() {
+  if (gameover) return;
 
-  let toppipe = {
-    img: topPimg,
+  let randomY = pipeY - pipeHeight / 4 - Math.random() * (pipeHeight / 2);
+  let gap = board.height / 4;
+
+  let topPipe = {
+    img: topPipeImg,
     x: pipeX,
-    y: randompipeY,
+    y: randomY,
     width: pipeWidth,
     height: pipeHeight,
     passed: false
   };
-pipearrray.push(toppipe)
 
-  let bottompipe = {
-    img: bottomPimg,
+  let bottomPipe = {
+    img: bottomPipeImg,
     x: pipeX,
-    y: randompipeY + pipeHeight + openingspace,
+    y: randomY + pipeHeight + gap,
     width: pipeWidth,
     height: pipeHeight,
     passed: false
   };
 
-  pipearrray.push(bottompipe);
+  pipeArray.push(topPipe);
+  pipeArray.push(bottomPipe);
 }
 
-function movebird(e){
-  if (e.code == "space" || e.code == "ArrowUp"){
-    velocityY = -6 
+function moveBird(e) {
+  if (e.code === "Space" || e.code === "ArrowUp") {
+    velocityY = -6;
   }
 }
 
-function detectcollision(a , b){
-  return a.x < b.x + b.width && 
-  a.x + a.width > b.x && 
-  a.y < b.y + b.height  &&
- a.y + a.height > b.y
+function detectCollision(a, b) {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+function restartGame() {
+  gameover = false;
+  score = 0;
+  velocityY = 0;
+  bird.y = boardHeight / 2;
+  pipeArray = [];
+  gameoverScreen.style.display = "none";
+  requestAnimationFrame(update);
 }

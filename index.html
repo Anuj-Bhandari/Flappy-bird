@@ -7,8 +7,22 @@
     <link rel="stylesheet" href="flappy.css">
 </head>
 <body>
+  <div class="game-container">
+    <div class="side-panel">
+      <button id="play-button" onclick="restartGame()">▶ Play</button>
+    </div>
+
     <canvas id="board"></canvas>
-    
+  </div>
+
+  <div id="game-over-screen" style="display: none; text-align: center;">
+    <h1 id="game-over-text">Game Over</h1>
+    <p id="score-text"></p>
+    <p id="high-score-text"></p>
+    <button onclick="restartGame()">Play Again</button>
+  </div>
+
+  <script src="flappy.js"></script>
 </body>
-<script src="flappy.js"></script>
+
 </html>
